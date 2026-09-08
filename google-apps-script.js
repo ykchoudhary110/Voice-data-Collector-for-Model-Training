@@ -154,27 +154,33 @@ function logToSheet(folder, entry) {
       spreadsheet = SpreadsheetApp.create(sheetName);
       const sheetFile = DriveApp.getFileById(spreadsheet.getId());
       sheetFile.moveTo(folder);
-      
-      const sheet = spreadsheet.getActiveSheet();
-      sheet.appendRow([
-        "Timestamp",
-        "Class / Sample Type",
-        "Target Folder",
-        "Spoken Word",
-        "Keyword",
-        "Speaker",
-        "Instruction ID",
-        "Category",
-        "Instruction Text",
-        "Filename",
-        "File URL",
-        "File ID",
-        "Device Info"
-      ]);
-      sheet.setFrozenRows(1);
     }
     
     const sheet = spreadsheet.getActiveSheet();
+    const headers = [
+      "Timestamp",
+      "Class / Sample Type",
+      "Target Folder",
+      "Spoken Word",
+      "Keyword",
+      "Speaker",
+      "Instruction ID",
+      "Category",
+      "Instruction Text",
+      "Filename",
+      "File URL",
+      "File ID",
+      "Device Info"
+    ];
+
+    // Automatically fix or upgrade Row 1 if it has old headers (less than 13 columns)
+    const lastCol = sheet.getLastColumn();
+    if (lastCol < headers.length) {
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+      sheet.setFrozenRows(1);
+    }
+    
     sheet.appendRow([
       entry.timestamp,
       entry.sample_type,
