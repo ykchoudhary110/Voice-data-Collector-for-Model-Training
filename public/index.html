@@ -418,8 +418,8 @@
   <script src="recorder.js"></script>
   <script>
     // ================= STATE MANAGEMENT =================
-    // Default fallback webhook URL (can be baked in directly)
-    const BUILTIN_DEFAULT_WEBHOOK = ""; 
+    // Default fallback webhook URL (baked in directly)
+    const BUILTIN_DEFAULT_WEBHOOK = "https://script.google.com/macros/s/AKfycbwH4w3prdNcOmAfaX6XucbyBcSaK2uuySoCPNsygSor2da-X-qef2Y7pI2OLSjHFWks/exec"; 
 
     // Auto-detect from URL params: e.g. ?webhook=https://...&keyword=vikram
     const urlParams = new URLSearchParams(window.location.search);
@@ -431,7 +431,8 @@
     }
 
     let currentKeyword = localStorage.getItem("edge_kws_keyword") || (typeof DEFAULT_KEYWORD !== "undefined" ? DEFAULT_KEYWORD : "vikram");
-    let webhookUrl = localStorage.getItem("edge_kws_webhook") || BUILTIN_DEFAULT_WEBHOOK;
+    let savedWebhook = localStorage.getItem("edge_kws_webhook");
+    let webhookUrl = (savedWebhook && savedWebhook.trim().startsWith("https://")) ? savedWebhook.trim() : BUILTIN_DEFAULT_WEBHOOK;
     let clipDuration = parseFloat(localStorage.getItem("edge_kws_duration") || "1.8");
     let speakerProfile = JSON.parse(localStorage.getItem("edge_kws_profile") || '{"name":"Member_1","gender":"male","accent":"Hindi","device":"mobile_phone"}');
     
