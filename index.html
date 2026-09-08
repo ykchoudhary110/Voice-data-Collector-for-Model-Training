@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>EdgeKWS Studio — Voice Dataset Collection</title>
+  <title>EdgeKWS Studio — "Vikram" Wake-Word Dataset Collector</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- JSZip for local dataset export -->
@@ -68,7 +68,7 @@
               &lt;256KB RAM
             </span>
           </div>
-          <p class="text-xs text-slate-400">Keyword: <span id="navKeywordDisplay" class="font-bold text-amber-400 uppercase tracking-wider">chhotu</span></p>
+          <p class="text-xs text-slate-400">Wake-Word: <span id="navKeywordDisplay" class="font-bold text-amber-400 uppercase tracking-wider">VIKRAM</span></p>
         </div>
       </div>
 
@@ -107,27 +107,27 @@
   </header>
 
   <!-- ================= MAIN RECORDING WORKSPACE ================= -->
-  <main class="max-w-2xl w-full mx-auto px-4 py-4 md:py-6 flex-1 flex flex-col justify-center">
+  <main class="max-w-2xl w-full mx-auto px-4 py-3 md:py-5 flex-1 flex flex-col justify-center">
 
     <!-- Progress Indicator -->
-    <div class="mb-4">
+    <div class="mb-3">
       <div class="flex items-center justify-between text-xs font-semibold text-slate-400 mb-1.5">
         <span class="flex items-center gap-1.5">
-          <span id="instructionNumber" class="text-brand-400 font-mono text-sm">Instruction 1 of 40</span>
+          <span id="instructionNumber" class="text-brand-400 font-mono text-sm">Instruction 1 of 45</span>
           <span id="instructionBadge" class="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-300 font-medium">Proximity</span>
         </span>
         <span id="progressPercent" class="font-mono text-slate-400">0%</span>
       </div>
       <div class="w-full h-2 bg-slate-800/80 rounded-full overflow-hidden">
-        <div id="progressBar" class="h-full bg-gradient-to-r from-brand-500 to-accent-cyan transition-all duration-300" style="width: 2.5%"></div>
+        <div id="progressBar" class="h-full bg-gradient-to-r from-brand-500 to-accent-cyan transition-all duration-300" style="width: 2.2%"></div>
       </div>
     </div>
 
     <!-- MAIN PROMPT CARD -->
-    <div id="promptCard" class="relative rounded-2xl bg-gradient-to-b from-slate-900/90 to-slate-900/50 border border-slate-800 p-5 md:p-8 shadow-2xl shadow-black/50 backdrop-blur-sm transition-all duration-200">
+    <div id="promptCard" class="relative rounded-2xl bg-gradient-to-b from-slate-900/90 to-slate-900/50 border border-slate-800 p-4 md:p-6 shadow-2xl shadow-black/50 backdrop-blur-sm transition-all duration-200">
       
       <!-- Top Badges & Warning -->
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center justify-between mb-3">
         <span id="cardCategoryPill" class="text-xs font-semibold px-3 py-1 rounded-md bg-indigo-950 border border-indigo-800/60 text-indigo-300 uppercase tracking-wider">
           Distance Variation
         </span>
@@ -139,28 +139,41 @@
         </span>
       </div>
 
-      <!-- Giant Spoken Word Display -->
-      <div class="text-center py-4 md:py-6">
-        <p class="text-xs uppercase font-medium tracking-widest text-slate-400 mb-1">Speak this word:</p>
-        <div id="spokenWordDisplay" class="text-5xl md:text-6xl font-black tracking-tight text-white transition-transform transform">
-          CHHOTU
+      <!-- VISUAL SCENARIO ILLUSTRATION / CARD -->
+      <div id="scenarioVisualBox" class="rounded-xl border border-slate-800/80 bg-gradient-to-r from-slate-950 to-slate-900 p-3.5 mb-3 flex items-center gap-3.5 transition-all duration-200">
+        <div id="scenarioIcon" class="w-14 h-14 rounded-xl bg-indigo-950/70 border border-indigo-700/40 flex items-center justify-center text-3xl shadow-inner shrink-0">
+          📱
         </div>
-        <p id="phoneticHint" class="text-xs text-slate-500 mt-1 font-mono">16kHz 16-bit Mono PCM</p>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-300">SCENARIO</span>
+            <span id="scenarioSceneText" class="text-xs font-semibold text-slate-300 truncate">Holding device in hand, 15cm from mouth</span>
+          </div>
+          <p id="instructionTitle" class="text-sm font-bold text-white mt-0.5">
+            Close Mic Proximity (15 cm)
+          </p>
+          <p id="instructionDetail" class="text-xs text-slate-400 mt-0.5 leading-snug">
+            Hold phone or sit 15-20 cm directly in front of the mic. Speak at normal conversational volume.
+          </p>
+        </div>
       </div>
 
-      <!-- Specific Instruction Text -->
-      <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 my-2 text-center">
-        <h3 id="instructionTitle" class="text-sm md:text-base font-semibold text-slate-200 mb-1">
-          Close Mic Proximity (15-20 cm)
-        </h3>
-        <p id="instructionDetail" class="text-xs md:text-sm text-slate-400 leading-relaxed">
-          Hold phone or sit 15-20 cm away from mic. Speak at normal conversational volume.
-        </p>
+      <!-- Giant Spoken Word Display -->
+      <div class="text-center py-2 md:py-3">
+        <p class="text-[11px] uppercase font-medium tracking-widest text-slate-400 mb-0.5">Pronounce this word clearly:</p>
+        <div id="spokenWordDisplay" class="text-5xl md:text-6xl font-black tracking-tight text-white transition-transform transform">
+          VIKRAM
+        </div>
+        <div id="phoneticTag" class="flex items-center justify-center gap-2 mt-1">
+          <span class="text-xs text-amber-400/90 font-mono">[ v ɪ k r ʌ m ]</span>
+          <span class="text-slate-600">•</span>
+          <span class="text-xs text-slate-500 font-mono">16kHz 16-bit Mono</span>
+        </div>
       </div>
 
       <!-- Live Audio Visualizer Canvas -->
-      <div class="mt-4 mb-3 relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 h-20 flex items-center justify-center">
-        <canvas id="visualizerCanvas" width="600" height="80" class="w-full h-full"></canvas>
+      <div class="mt-2 mb-3 relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 h-16 flex items-center justify-center">
+        <canvas id="visualizerCanvas" width="600" height="64" class="w-full h-full"></canvas>
         <div id="visualizerPlaceholder" class="absolute inset-0 flex items-center justify-center text-xs text-slate-600 font-mono">
           [ Microphone Ready • Tap Record ]
         </div>
@@ -169,16 +182,16 @@
       </div>
 
       <!-- RECORDING / ACTION CONTROLS -->
-      <div class="pt-2">
+      <div class="pt-1">
 
         <!-- Initial Record State -->
         <div id="idleControls" class="flex flex-col items-center">
-          <button id="btnRecord" onclick="toggleRecord()" class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-tr from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white flex items-center justify-center shadow-xl shadow-rose-600/30 transition transform active:scale-95 focus:outline-none ring-4 ring-rose-500/20">
-            <svg id="micIcon" class="w-8 h-8 md:w-10 md:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button id="btnRecord" onclick="toggleRecord()" class="w-20 h-20 md:w-22 md:h-22 rounded-full bg-gradient-to-tr from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white flex items-center justify-center shadow-xl shadow-rose-600/30 transition transform active:scale-95 focus:outline-none ring-4 ring-rose-500/20">
+            <svg id="micIcon" class="w-8 h-8 md:w-9 md:h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
             </svg>
           </button>
-          <span class="text-xs text-slate-400 mt-3 flex items-center gap-1.5">
+          <span class="text-xs text-slate-400 mt-2.5 flex items-center gap-1.5">
             <span>Tap to record</span>
             <span class="hidden md:inline text-slate-600">•</span>
             <kbd class="hidden md:inline px-2 py-0.5 text-[10px] font-semibold text-slate-300 bg-slate-800 border border-slate-700 rounded shadow">Space</kbd>
@@ -187,28 +200,28 @@
 
         <!-- Recording In-Progress State -->
         <div id="recordingControls" class="hidden flex flex-col items-center">
-          <button onclick="stopRecordingEarly()" class="w-20 h-20 md:w-24 md:h-24 rounded-full record-btn-active pulse-ring text-white flex items-center justify-center shadow-2xl transition transform active:scale-95">
+          <button onclick="stopRecordingEarly()" class="w-20 h-20 md:w-22 md:h-22 rounded-full record-btn-active pulse-ring text-white flex items-center justify-center shadow-2xl transition transform active:scale-95">
             <div class="w-6 h-6 bg-white rounded-md"></div>
           </button>
-          <span class="text-xs font-semibold text-rose-400 mt-3 flex items-center gap-1.5 animate-pulse">
+          <span class="text-xs font-semibold text-rose-400 mt-2.5 flex items-center gap-1.5 animate-pulse">
             <span class="w-2 h-2 rounded-full bg-rose-500"></span>
             Recording... (auto-stops at 1.8s)
           </span>
         </div>
 
         <!-- Review / Approval State -->
-        <div id="reviewControls" class="hidden flex flex-col gap-3">
-          <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+        <div id="reviewControls" class="hidden flex flex-col gap-2.5">
+          <div class="flex items-center justify-between bg-slate-950 p-2 rounded-xl border border-slate-800">
             <audio id="audioPreview" controls class="w-full h-9 focus:outline-none"></audio>
           </div>
           <div class="grid grid-cols-2 gap-3 pt-1">
-            <button onclick="retakeRecording()" class="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-sm border border-slate-700 flex items-center justify-center gap-2 transition active:scale-95">
+            <button onclick="retakeRecording()" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-sm border border-slate-700 flex items-center justify-center gap-2 transition active:scale-95">
               <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
               Retake
             </button>
-            <button onclick="approveAndNext()" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition active:scale-95">
+            <button onclick="approveAndNext()" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition active:scale-95">
               <span>Save & Next</span>
               <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
@@ -222,11 +235,11 @@
     </div>
 
     <!-- Navigation between instructions -->
-    <div class="flex items-center justify-between mt-4 px-1 text-xs text-slate-400">
+    <div class="flex items-center justify-between mt-3 px-1 text-xs text-slate-400">
       <button onclick="navigateInstruction(-1)" class="flex items-center gap-1 hover:text-white transition py-1 px-2 rounded hover:bg-slate-800/60">
         &larr; Previous
       </button>
-      <span class="text-slate-600">Tip: Say it naturally as instructed</span>
+      <span class="text-slate-500 font-mono">Tip: Say it naturally in scenario</span>
       <button onclick="navigateInstruction(1)" class="flex items-center gap-1 hover:text-white transition py-1 px-2 rounded hover:bg-slate-800/60">
         Skip / Next &rarr;
       </button>
@@ -236,7 +249,7 @@
 
   <!-- ================= FOOTER ================= -->
   <footer class="border-t border-slate-900 bg-slate-950/80 px-4 py-2.5 text-center text-xs text-slate-600">
-    EdgeKWS Engine Dataset Collector • 16 kHz Mono PCM WAV • Ready for TFLite Micro / Edge Transformers
+    EdgeKWS Engine Dataset Collector • 16 kHz Mono PCM WAV • Target: &lt;256KB RAM Micro-Transformers
   </footer>
 
   <!-- ================= MODALS & DRAWERS ================= -->
@@ -259,7 +272,7 @@
       <div class="space-y-4 text-sm">
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Your Name / Contributor ID *</label>
-          <input type="text" id="inputSpeakerName" placeholder="e.g. Yash, Member_1" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 font-medium">
+          <input type="text" id="inputSpeakerName" placeholder="e.g. Yash, Rohan, Sneha" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 font-medium">
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -273,7 +286,7 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1">Native Accent</label>
-            <input type="text" id="inputSpeakerAccent" placeholder="e.g. Hindi, English" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-600 focus:outline-none focus:border-brand-500">
+            <input type="text" id="inputSpeakerAccent" placeholder="e.g. Hindi, Indian-English" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-600 focus:outline-none focus:border-brand-500">
           </div>
         </div>
 
@@ -320,7 +333,7 @@
         <!-- Target Keyword Configuration -->
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Target Wake-Word / Keyword</label>
-          <input type="text" id="settingKeyword" value="chhotu" placeholder="e.g. chhotu, jarvis, activate" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono font-bold focus:outline-none focus:border-brand-500 uppercase">
+          <input type="text" id="settingKeyword" value="vikram" placeholder="e.g. vikram, activate" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono font-bold focus:outline-none focus:border-brand-500 uppercase">
           <p class="text-[11px] text-slate-500 mt-1">Changes the primary trigger word displayed to contributors.</p>
         </div>
 
@@ -405,13 +418,13 @@
   <script src="recorder.js"></script>
   <script>
     // ================= STATE MANAGEMENT =================
-    let currentKeyword = localStorage.getItem("edge_kws_keyword") || "chhotu";
+    let currentKeyword = localStorage.getItem("edge_kws_keyword") || (typeof DEFAULT_KEYWORD !== "undefined" ? DEFAULT_KEYWORD : "vikram");
     let webhookUrl = localStorage.getItem("edge_kws_webhook") || "";
     let clipDuration = parseFloat(localStorage.getItem("edge_kws_duration") || "1.8");
     let speakerProfile = JSON.parse(localStorage.getItem("edge_kws_profile") || '{"name":"Member_1","gender":"male","accent":"Hindi","device":"mobile_phone"}');
     
     let currentIndex = 0;
-    let localDataset = []; // Stores { id, keyword, speaker, instruction_id, instruction_text, blob, duration, timestamp, filename, isNegative, uploaded }
+    let localDataset = [];
     
     const recorder = new EdgeAudioRecorder({ targetSampleRate: 16000 });
     let currentTakeResult = null;
@@ -445,7 +458,7 @@
     });
 
     function updateHeader() {
-      document.getElementById("navKeywordDisplay").textContent = currentKeyword;
+      document.getElementById("navKeywordDisplay").textContent = currentKeyword.toUpperCase();
       document.getElementById("navSpeakerName").textContent = speakerProfile.name || "Guest";
       
       const driveDot = document.getElementById("driveStatusDot");
@@ -481,17 +494,34 @@
       document.getElementById("instructionTitle").textContent = inst.title;
       document.getElementById("instructionDetail").textContent = inst.instruction;
 
+      // Update Visual Scenario Box
+      const scenarioIcon = document.getElementById("scenarioIcon");
+      scenarioIcon.textContent = inst.icon || "🎙️";
+      document.getElementById("scenarioSceneText").textContent = inst.visualScene || inst.title;
+
       // Update Spoken Word & Confuser alert
       const wordDisplay = document.getElementById("spokenWordDisplay");
       const confuserAlert = document.getElementById("confuserAlert");
+      const phoneticTag = document.getElementById("phoneticTag");
+
       if (inst.isNegative) {
         wordDisplay.textContent = (inst.spokenWord || "CONFUSER").toUpperCase();
         wordDisplay.className = "text-5xl md:text-6xl font-black tracking-tight text-rose-400 transition-transform transform scale-105";
         confuserAlert.classList.remove("hidden");
+        phoneticTag.innerHTML = `
+          <span class="text-xs text-rose-400 font-bold uppercase tracking-wider">DO NOT SAY "${currentKeyword.toUpperCase()}"!</span>
+          <span class="text-slate-600">•</span>
+          <span class="text-xs text-slate-400 font-mono">Negative Class Sample</span>
+        `;
       } else {
         wordDisplay.textContent = currentKeyword.toUpperCase();
         wordDisplay.className = "text-5xl md:text-6xl font-black tracking-tight text-white transition-transform transform";
         confuserAlert.classList.add("hidden");
+        phoneticTag.innerHTML = `
+          <span class="text-xs text-amber-400/90 font-mono">[ v ɪ k r ʌ m ]</span>
+          <span class="text-slate-600">•</span>
+          <span class="text-xs text-slate-500 font-mono">16kHz 16-bit Mono</span>
+        `;
       }
 
       // Update Progress Bar
@@ -635,7 +665,7 @@
       if (currentIndex < DEFAULT_INSTRUCTIONS.length - 1) {
         navigateInstruction(1);
       } else {
-        showToast("Awesome! All 40 instructions completed for this keyword!", "success");
+        showToast("Awesome! All 45 instructions completed for Vikram!", "success");
         openDatasetDrawer();
       }
     }
@@ -657,7 +687,6 @@
 
         showToast("Uploading to Google Drive...", "info");
 
-        // Use standard POST with text/plain to avoid Google Apps Script preflight CORS issues
         const response = await fetch(webhookUrl.trim(), {
           method: "POST",
           body: JSON.stringify(payload)
@@ -668,12 +697,11 @@
           takeRecord.uploaded = true;
           showToast("Saved to Google Drive & Sheet!", "success");
         } else {
-          console.warn("Drive response:", result);
           showToast("Saved locally (Drive replied: " + (result.message || "ok") + ")", "info");
         }
       } catch (err) {
         console.error("Google Drive Upload Error:", err);
-        showToast("Saved locally (Google Drive sync failed, see console)", "info");
+        showToast("Saved locally (Google Drive sync failed, check console)", "info");
       }
     }
 
@@ -761,7 +789,7 @@
     }
 
     function saveSettings() {
-      const newKeyword = document.getElementById("settingKeyword").value.trim() || "chhotu";
+      const newKeyword = document.getElementById("settingKeyword").value.trim() || "vikram";
       webhookUrl = document.getElementById("settingWebhookUrl").value.trim();
       clipDuration = parseFloat(document.getElementById("settingDuration").value);
 
