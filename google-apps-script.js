@@ -49,9 +49,17 @@ function doPost(e) {
 
     // 1. Get or create root dataset folder
     let targetFolder;
-    if (TARGET_FOLDER_ID && TARGET_FOLDER_ID.trim() !== "") {
+    let folderId = TARGET_FOLDER_ID ? TARGET_FOLDER_ID.trim() : "";
+    
+    // Auto-extract ID if user pasted full Google Drive URL
+    if (folderId.includes("/folders/")) {
+      const parts = folderId.split("/folders/")[1];
+      folderId = parts.split("/")[0].split("?")[0].trim();
+    }
+
+    if (folderId !== "") {
       try {
-        targetFolder = DriveApp.getFolderById(TARGET_FOLDER_ID.trim());
+        targetFolder = DriveApp.getFolderById(folderId);
       } catch (err) {
         targetFolder = getOrCreateFolder(DEFAULT_FOLDER_NAME);
       }
