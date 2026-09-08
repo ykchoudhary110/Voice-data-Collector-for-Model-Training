@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "name": "edge-kws-voice-collector",
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "s-maxage=0, no-cache" }
+      ]
+    }
+  ]
+}

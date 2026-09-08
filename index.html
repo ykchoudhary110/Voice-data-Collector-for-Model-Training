@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>EdgeKWS Studio — Voice Dataset Collection</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- JSZip for local dataset export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca'
+            },
+            accent: {
+              cyan: '#06b6d4',
+              emerald: '#10b981',
+              rose: '#f43f5e',
+              amber: '#f59e0b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      touch-action: manipulation;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    .pulse-ring {
+      animation: pulse 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .record-btn-active {
+      background: radial-gradient(circle, #ef4444 0%, #b91c1c 100%) !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-brand-500 selection:text-white">
+
+  <!-- ================= TOP NAVIGATION ================= -->
+  <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40 px-4 py-3">
+    <div class="max-w-4xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-accent-cyan flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-base md:text-lg tracking-tight">EdgeKWS Studio</h1>
+            <span class="text-[11px] px-2 py-0.5 rounded-full font-mono bg-indigo-950/80 border border-indigo-700/50 text-indigo-300">
+              &lt;256KB RAM
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Keyword: <span id="navKeywordDisplay" class="font-bold text-amber-400 uppercase tracking-wider">chhotu</span></p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Drive Sync Status Badge -->
+        <button id="btnDriveStatus" onclick="openSettingsModal()" class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-800/80 border border-slate-700 hover:border-slate-600 transition">
+          <span id="driveStatusDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span id="driveStatusText" class="text-slate-300">Local Only</span>
+        </button>
+
+        <!-- Speaker Badge -->
+        <button id="btnSpeakerBadge" onclick="openProfileModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700 hover:border-slate-600 transition text-slate-200">
+          <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+          <span id="navSpeakerName">Guest</span>
+        </button>
+
+        <!-- Dataset Drawer Button -->
+        <button onclick="openDatasetDrawer()" class="p-2 rounded-lg text-slate-300 bg-slate-800/80 border border-slate-700 hover:bg-slate-700 transition relative" title="View dataset">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7M4 7c0-2 1.5-3 3.5-3h9c2 0 3.5 1 3.5 3M4 7h16M9 11h6m-6 4h4"></path>
+          </svg>
+          <span id="datasetCountBadge" class="absolute -top-1 -right-1 bg-brand-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+        </button>
+
+        <!-- Settings Button -->
+        <button onclick="openSettingsModal()" class="p-2 rounded-lg text-slate-300 bg-slate-800/80 border border-slate-700 hover:bg-slate-700 transition" title="Settings">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN RECORDING WORKSPACE ================= -->
+  <main class="max-w-2xl w-full mx-auto px-4 py-4 md:py-6 flex-1 flex flex-col justify-center">
+
+    <!-- Progress Indicator -->
+    <div class="mb-4">
+      <div class="flex items-center justify-between text-xs font-semibold text-slate-400 mb-1.5">
+        <span class="flex items-center gap-1.5">
+          <span id="instructionNumber" class="text-brand-400 font-mono text-sm">Instruction 1 of 40</span>
+          <span id="instructionBadge" class="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-300 font-medium">Proximity</span>
+        </span>
+        <span id="progressPercent" class="font-mono text-slate-400">0%</span>
+      </div>
+      <div class="w-full h-2 bg-slate-800/80 rounded-full overflow-hidden">
+        <div id="progressBar" class="h-full bg-gradient-to-r from-brand-500 to-accent-cyan transition-all duration-300" style="width: 2.5%"></div>
+      </div>
+    </div>
+
+    <!-- MAIN PROMPT CARD -->
+    <div id="promptCard" class="relative rounded-2xl bg-gradient-to-b from-slate-900/90 to-slate-900/50 border border-slate-800 p-5 md:p-8 shadow-2xl shadow-black/50 backdrop-blur-sm transition-all duration-200">
+      
+      <!-- Top Badges & Warning -->
+      <div class="flex items-center justify-between mb-4">
+        <span id="cardCategoryPill" class="text-xs font-semibold px-3 py-1 rounded-md bg-indigo-950 border border-indigo-800/60 text-indigo-300 uppercase tracking-wider">
+          Distance Variation
+        </span>
+        <span id="confuserAlert" class="hidden text-xs font-bold px-2.5 py-1 rounded-md bg-rose-950/80 border border-rose-700/80 text-rose-300 flex items-center gap-1 animate-pulse">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+          HARD NEGATIVE CONFUSER
+        </span>
+      </div>
+
+      <!-- Giant Spoken Word Display -->
+      <div class="text-center py-4 md:py-6">
+        <p class="text-xs uppercase font-medium tracking-widest text-slate-400 mb-1">Speak this word:</p>
+        <div id="spokenWordDisplay" class="text-5xl md:text-6xl font-black tracking-tight text-white transition-transform transform">
+          CHHOTU
+        </div>
+        <p id="phoneticHint" class="text-xs text-slate-500 mt-1 font-mono">16kHz 16-bit Mono PCM</p>
+      </div>
+
+      <!-- Specific Instruction Text -->
+      <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 my-2 text-center">
+        <h3 id="instructionTitle" class="text-sm md:text-base font-semibold text-slate-200 mb-1">
+          Close Mic Proximity (15-20 cm)
+        </h3>
+        <p id="instructionDetail" class="text-xs md:text-sm text-slate-400 leading-relaxed">
+          Hold phone or sit 15-20 cm away from mic. Speak at normal conversational volume.
+        </p>
+      </div>
+
+      <!-- Live Audio Visualizer Canvas -->
+      <div class="mt-4 mb-3 relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 h-20 flex items-center justify-center">
+        <canvas id="visualizerCanvas" width="600" height="80" class="w-full h-full"></canvas>
+        <div id="visualizerPlaceholder" class="absolute inset-0 flex items-center justify-center text-xs text-slate-600 font-mono">
+          [ Microphone Ready • Tap Record ]
+        </div>
+        <!-- Progress Timer Bar inside Visualizer -->
+        <div id="recordTimeBar" class="absolute bottom-0 left-0 h-1 bg-rose-500 transition-all duration-75" style="width: 0%"></div>
+      </div>
+
+      <!-- RECORDING / ACTION CONTROLS -->
+      <div class="pt-2">
+
+        <!-- Initial Record State -->
+        <div id="idleControls" class="flex flex-col items-center">
+          <button id="btnRecord" onclick="toggleRecord()" class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-tr from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white flex items-center justify-center shadow-xl shadow-rose-600/30 transition transform active:scale-95 focus:outline-none ring-4 ring-rose-500/20">
+            <svg id="micIcon" class="w-8 h-8 md:w-10 md:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+            </svg>
+          </button>
+          <span class="text-xs text-slate-400 mt-3 flex items-center gap-1.5">
+            <span>Tap to record</span>
+            <span class="hidden md:inline text-slate-600">•</span>
+            <kbd class="hidden md:inline px-2 py-0.5 text-[10px] font-semibold text-slate-300 bg-slate-800 border border-slate-700 rounded shadow">Space</kbd>
+          </span>
+        </div>
+
+        <!-- Recording In-Progress State -->
+        <div id="recordingControls" class="hidden flex flex-col items-center">
+          <button onclick="stopRecordingEarly()" class="w-20 h-20 md:w-24 md:h-24 rounded-full record-btn-active pulse-ring text-white flex items-center justify-center shadow-2xl transition transform active:scale-95">
+            <div class="w-6 h-6 bg-white rounded-md"></div>
+          </button>
+          <span class="text-xs font-semibold text-rose-400 mt-3 flex items-center gap-1.5 animate-pulse">
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+            Recording... (auto-stops at 1.8s)
+          </span>
+        </div>
+
+        <!-- Review / Approval State -->
+        <div id="reviewControls" class="hidden flex flex-col gap-3">
+          <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+            <audio id="audioPreview" controls class="w-full h-9 focus:outline-none"></audio>
+          </div>
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <button onclick="retakeRecording()" class="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-sm border border-slate-700 flex items-center justify-center gap-2 transition active:scale-95">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              Retake
+            </button>
+            <button onclick="approveAndNext()" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition active:scale-95">
+              <span>Save & Next</span>
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Navigation between instructions -->
+    <div class="flex items-center justify-between mt-4 px-1 text-xs text-slate-400">
+      <button onclick="navigateInstruction(-1)" class="flex items-center gap-1 hover:text-white transition py-1 px-2 rounded hover:bg-slate-800/60">
+        &larr; Previous
+      </button>
+      <span class="text-slate-600">Tip: Say it naturally as instructed</span>
+      <button onclick="navigateInstruction(1)" class="flex items-center gap-1 hover:text-white transition py-1 px-2 rounded hover:bg-slate-800/60">
+        Skip / Next &rarr;
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="border-t border-slate-900 bg-slate-950/80 px-4 py-2.5 text-center text-xs text-slate-600">
+    EdgeKWS Engine Dataset Collector • 16 kHz Mono PCM WAV • Ready for TFLite Micro / Edge Transformers
+  </footer>
+
+  <!-- ================= MODALS & DRAWERS ================= -->
+
+  <!-- 1. SPEAKER ONBOARDING MODAL -->
+  <div id="profileModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-brand-600/20 text-brand-400 flex items-center justify-center">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-white">Contributor Profile</h2>
+          <p class="text-xs text-slate-400">Speaker metadata to ensure dataset diversity</p>
+        </div>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Your Name / Contributor ID *</label>
+          <input type="text" id="inputSpeakerName" placeholder="e.g. Yash, Member_1" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 font-medium">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Gender</label>
+            <select id="inputSpeakerGender" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-brand-500">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Native Accent</label>
+            <input type="text" id="inputSpeakerAccent" placeholder="e.g. Hindi, English" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-600 focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Recording Device</label>
+          <select id="inputDeviceType" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-brand-500">
+            <option value="mobile_phone">Smartphone (Mobile Mic)</option>
+            <option value="laptop_built_in">Laptop Built-in Mic</option>
+            <option value="headset_earphone">Headset / Earphones</option>
+            <option value="external_mic">External USB / Condenser Mic</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-2">
+        <button onclick="saveProfile()" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm transition shadow-lg shadow-brand-600/30">
+          Start Recording Session
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. SETTINGS MODAL (ADMIN & GOOGLE DRIVE WEBHOOK) -->
+  <div id="settingsModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+          </div>
+          <h2 class="text-lg font-bold text-white">System & Dataset Settings</h2>
+        </div>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <!-- Target Keyword Configuration -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Target Wake-Word / Keyword</label>
+          <input type="text" id="settingKeyword" value="chhotu" placeholder="e.g. chhotu, jarvis, activate" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono font-bold focus:outline-none focus:border-brand-500 uppercase">
+          <p class="text-[11px] text-slate-500 mt-1">Changes the primary trigger word displayed to contributors.</p>
+        </div>
+
+        <!-- Google Apps Script Webhook URL -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold text-slate-300">Google Apps Script Webhook URL</label>
+            <span class="text-[10px] text-emerald-400 font-medium">100% Free & Direct</span>
+          </div>
+          <input type="url" id="settingWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs placeholder-slate-600 focus:outline-none focus:border-brand-500">
+          <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+            All takes will automatically save to your Google Drive folder and log into Google Sheets. If empty, takes are saved locally in browser memory.
+          </p>
+        </div>
+
+        <!-- Recording Clip Duration -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Auto-Stop Clip Duration (Seconds)</label>
+          <select id="settingDuration" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-brand-500">
+            <option value="1.5">1.5 Seconds (Compact Wake-Word)</option>
+            <option value="1.8" selected>1.8 Seconds (Recommended Standard)</option>
+            <option value="2.0">2.0 Seconds (With Reverberation/Decay)</option>
+            <option value="2.5">2.5 Seconds (Slightly longer phrases)</option>
+          </select>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="pt-3 border-t border-slate-800">
+          <button onclick="clearLocalDataset()" class="w-full py-2.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 text-xs font-semibold transition">
+            Clear Local Cached Recordings
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-2">
+        <button onclick="saveSettings()" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm transition">
+          Apply & Save Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. DATASET DRAWER (REVIEW SAMPLES & EXPORT ZIP) -->
+  <div id="datasetDrawer" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end hidden">
+    <div class="bg-slate-900 border-l border-slate-800 w-full max-w-md h-full flex flex-col p-5 shadow-2xl">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div>
+          <h2 class="text-base font-bold text-white">Collected Dataset</h2>
+          <p class="text-xs text-slate-400"><span id="drawerCount">0</span> audio clips cached locally</p>
+        </div>
+        <button onclick="closeDatasetDrawer()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- One-Click Export ZIP Button -->
+      <div class="py-4 border-b border-slate-800">
+        <button onclick="exportDatasetZip()" id="btnExportZip" class="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-accent-cyan hover:from-brand-500 hover:to-accent-cyan text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-brand-600/20 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          <span>Download Dataset (ZIP + CSV)</span>
+        </button>
+        <p class="text-[11px] text-slate-500 text-center mt-1.5">Zero data loss guarantee: instantly downloads all 16kHz WAVs</p>
+      </div>
+
+      <!-- Sample List -->
+      <div id="datasetListContainer" class="flex-1 overflow-y-auto py-3 space-y-2">
+        <p class="text-xs text-slate-500 text-center py-8">No recordings collected yet in this session.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none px-4 py-3 rounded-xl text-xs font-semibold shadow-xl border flex items-center gap-2">
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="instructions.js"></script>
+  <script src="recorder.js"></script>
+  <script>
+    // ================= STATE MANAGEMENT =================
+    let currentKeyword = localStorage.getItem("edge_kws_keyword") || "chhotu";
+    let webhookUrl = localStorage.getItem("edge_kws_webhook") || "";
+    let clipDuration = parseFloat(localStorage.getItem("edge_kws_duration") || "1.8");
+    let speakerProfile = JSON.parse(localStorage.getItem("edge_kws_profile") || '{"name":"Member_1","gender":"male","accent":"Hindi","device":"mobile_phone"}');
+    
+    let currentIndex = 0;
+    let localDataset = []; // Stores { id, keyword, speaker, instruction_id, instruction_text, blob, duration, timestamp, filename, isNegative, uploaded }
+    
+    const recorder = new EdgeAudioRecorder({ targetSampleRate: 16000 });
+    let currentTakeResult = null;
+    let autoStopTimer = null;
+    let timerProgressInterval = null;
+    let isRecordingSession = false;
+
+    // ================= INITIALIZATION =================
+    window.addEventListener("DOMContentLoaded", () => {
+      updateHeader();
+      loadInstruction(0);
+      checkProfileOnboarding();
+
+      // Keyboard shortcuts
+      window.addEventListener("keydown", (e) => {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+        if (e.code === "Space") {
+          e.preventDefault();
+          if (!isRecordingSession && !currentTakeResult) {
+            toggleRecord();
+          } else if (isRecordingSession) {
+            stopRecordingEarly();
+          } else if (currentTakeResult) {
+            approveAndNext();
+          }
+        } else if (e.code === "Enter" && currentTakeResult) {
+          e.preventDefault();
+          approveAndNext();
+        }
+      });
+    });
+
+    function updateHeader() {
+      document.getElementById("navKeywordDisplay").textContent = currentKeyword;
+      document.getElementById("navSpeakerName").textContent = speakerProfile.name || "Guest";
+      
+      const driveDot = document.getElementById("driveStatusDot");
+      const driveText = document.getElementById("driveStatusText");
+      if (webhookUrl && webhookUrl.trim().startsWith("https://")) {
+        driveDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        driveText.textContent = "Drive Active";
+      } else {
+        driveDot.className = "w-2 h-2 rounded-full bg-amber-400";
+        driveText.textContent = "Local Only";
+      }
+      document.getElementById("datasetCountBadge").textContent = localDataset.length;
+    }
+
+    function checkProfileOnboarding() {
+      if (!localStorage.getItem("edge_kws_profile")) {
+        openProfileModal();
+      }
+    }
+
+    // ================= INSTRUCTION NAVIGATION =================
+    function loadInstruction(index) {
+      if (index < 0) index = 0;
+      if (index >= DEFAULT_INSTRUCTIONS.length) index = DEFAULT_INSTRUCTIONS.length - 1;
+      currentIndex = index;
+
+      const inst = DEFAULT_INSTRUCTIONS[currentIndex];
+      
+      // Update instruction details
+      document.getElementById("instructionNumber").textContent = `Instruction ${inst.id} of ${DEFAULT_INSTRUCTIONS.length}`;
+      document.getElementById("instructionBadge").textContent = inst.badge;
+      document.getElementById("cardCategoryPill").textContent = `${inst.category} Variation`;
+      document.getElementById("instructionTitle").textContent = inst.title;
+      document.getElementById("instructionDetail").textContent = inst.instruction;
+
+      // Update Spoken Word & Confuser alert
+      const wordDisplay = document.getElementById("spokenWordDisplay");
+      const confuserAlert = document.getElementById("confuserAlert");
+      if (inst.isNegative) {
+        wordDisplay.textContent = (inst.spokenWord || "CONFUSER").toUpperCase();
+        wordDisplay.className = "text-5xl md:text-6xl font-black tracking-tight text-rose-400 transition-transform transform scale-105";
+        confuserAlert.classList.remove("hidden");
+      } else {
+        wordDisplay.textContent = currentKeyword.toUpperCase();
+        wordDisplay.className = "text-5xl md:text-6xl font-black tracking-tight text-white transition-transform transform";
+        confuserAlert.classList.add("hidden");
+      }
+
+      // Update Progress Bar
+      const pct = Math.round(((currentIndex + 1) / DEFAULT_INSTRUCTIONS.length) * 100);
+      document.getElementById("progressPercent").textContent = `${pct}%`;
+      document.getElementById("progressBar").style.width = `${pct}%`;
+
+      // Reset controls to idle
+      resetToIdle();
+    }
+
+    function navigateInstruction(delta) {
+      loadInstruction(currentIndex + delta);
+    }
+
+    // ================= RECORDING ENGINE =================
+    async function toggleRecord() {
+      if (isRecordingSession) return;
+
+      try {
+        const micOk = await recorder.initMic();
+        if (!micOk) {
+          showToast("Microphone access denied or unavailable", "error");
+          return;
+        }
+
+        const canvas = document.getElementById("visualizerCanvas");
+        document.getElementById("visualizerPlaceholder").classList.add("hidden");
+        
+        recorder.startRecording(canvas);
+        isRecordingSession = true;
+
+        // Switch to recording UI
+        document.getElementById("idleControls").classList.add("hidden");
+        document.getElementById("reviewControls").classList.add("hidden");
+        document.getElementById("recordingControls").classList.remove("hidden");
+
+        // Progress bar timer for clip duration
+        const timerBar = document.getElementById("recordTimeBar");
+        timerBar.style.width = "0%";
+        const startTime = Date.now();
+        const durationMs = clipDuration * 1000;
+
+        timerProgressInterval = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(100, (elapsed / durationMs) * 100);
+          timerBar.style.width = `${progress}%`;
+        }, 50);
+
+        autoStopTimer = setTimeout(() => {
+          stopRecordingEarly();
+        }, durationMs);
+
+      } catch (err) {
+        console.error("Mic error:", err);
+        showToast("Error starting microphone: " + err.message, "error");
+      }
+    }
+
+    function stopRecordingEarly() {
+      if (!isRecordingSession) return;
+      isRecordingSession = false;
+
+      clearTimeout(autoStopTimer);
+      clearInterval(timerProgressInterval);
+      document.getElementById("recordTimeBar").style.width = "0%";
+
+      currentTakeResult = recorder.stopRecording();
+      if (!currentTakeResult) {
+        resetToIdle();
+        return;
+      }
+
+      // Load preview
+      const previewAudio = document.getElementById("audioPreview");
+      previewAudio.src = URL.createObjectURL(currentTakeResult.blob);
+      previewAudio.play().catch(() => {});
+
+      // Switch to review UI
+      document.getElementById("recordingControls").classList.add("hidden");
+      document.getElementById("idleControls").classList.add("hidden");
+      document.getElementById("reviewControls").classList.remove("hidden");
+      document.getElementById("visualizerPlaceholder").classList.remove("hidden");
+      document.getElementById("visualizerPlaceholder").textContent = `[ Recorded ${currentTakeResult.duration}s • 16kHz WAV ]`;
+    }
+
+    function retakeRecording() {
+      currentTakeResult = null;
+      resetToIdle();
+      toggleRecord();
+    }
+
+    function resetToIdle() {
+      currentTakeResult = null;
+      isRecordingSession = false;
+      clearTimeout(autoStopTimer);
+      clearInterval(timerProgressInterval);
+      document.getElementById("recordTimeBar").style.width = "0%";
+      document.getElementById("recordingControls").classList.add("hidden");
+      document.getElementById("reviewControls").classList.add("hidden");
+      document.getElementById("idleControls").classList.remove("hidden");
+      document.getElementById("visualizerPlaceholder").classList.remove("hidden");
+      document.getElementById("visualizerPlaceholder").textContent = "[ Microphone Ready • Tap Record ]";
+    }
+
+    // ================= APPROVE & SAVE =================
+    async function approveAndNext() {
+      if (!currentTakeResult) return;
+
+      const inst = DEFAULT_INSTRUCTIONS[currentIndex];
+      const speakerName = (speakerProfile.name || "anonymous").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+      const safeKeyword = currentKeyword.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+      const filename = `${safeKeyword}_${speakerName}_inst${inst.id}_${Date.now()}.wav`;
+
+      const takeRecord = {
+        id: Date.now(),
+        keyword: currentKeyword,
+        speaker: speakerProfile.name || "anonymous",
+        instruction_id: inst.id,
+        instruction_text: inst.title,
+        blob: currentTakeResult.blob,
+        duration: currentTakeResult.duration,
+        timestamp: new Date().toISOString(),
+        filename: filename,
+        isNegative: inst.isNegative,
+        uploaded: false
+      };
+
+      // 1. Save to local dataset memory
+      localDataset.push(takeRecord);
+      document.getElementById("datasetCountBadge").textContent = localDataset.length;
+
+      // 2. Upload to Google Drive if Webhook is configured
+      if (webhookUrl && webhookUrl.trim().startsWith("https://")) {
+        uploadToGoogleDrive(takeRecord);
+      } else {
+        showToast(`Saved locally! (${localDataset.length} total)`, "success");
+      }
+
+      // Advance to next instruction
+      if (currentIndex < DEFAULT_INSTRUCTIONS.length - 1) {
+        navigateInstruction(1);
+      } else {
+        showToast("Awesome! All 40 instructions completed for this keyword!", "success");
+        openDatasetDrawer();
+      }
+    }
+
+    // ================= ASYNC GOOGLE DRIVE UPLOAD =================
+    async function uploadToGoogleDrive(takeRecord) {
+      try {
+        const base64Audio = await EdgeAudioRecorder.blobToBase64(takeRecord.blob);
+        
+        const payload = {
+          speaker: takeRecord.speaker,
+          keyword: takeRecord.keyword,
+          instruction_id: takeRecord.instruction_id,
+          instruction_text: takeRecord.instruction_text,
+          filename: takeRecord.filename,
+          audio_base64: base64Audio,
+          device_info: `${speakerProfile.gender || "unknown"} | ${speakerProfile.accent || "unknown"} | ${speakerProfile.device || "unknown"}`
+        };
+
+        showToast("Uploading to Google Drive...", "info");
+
+        // Use standard POST with text/plain to avoid Google Apps Script preflight CORS issues
+        const response = await fetch(webhookUrl.trim(), {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.status === "success") {
+          takeRecord.uploaded = true;
+          showToast("Saved to Google Drive & Sheet!", "success");
+        } else {
+          console.warn("Drive response:", result);
+          showToast("Saved locally (Drive replied: " + (result.message || "ok") + ")", "info");
+        }
+      } catch (err) {
+        console.error("Google Drive Upload Error:", err);
+        showToast("Saved locally (Google Drive sync failed, see console)", "info");
+      }
+    }
+
+    // ================= EXPORT DATASET ZIP =================
+    async function exportDatasetZip() {
+      if (localDataset.length === 0) {
+        showToast("No recordings to export yet!", "error");
+        return;
+      }
+
+      const btn = document.getElementById("btnExportZip");
+      btn.disabled = true;
+      btn.innerHTML = `<span class="animate-spin mr-2">⏳</span> Packaging ${localDataset.length} WAVs...`;
+
+      try {
+        const zip = new JSZip();
+        const safeKeyword = currentKeyword.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+        const folder = zip.folder(safeKeyword);
+
+        // Build metadata.csv
+        let csvContent = "filename,keyword,speaker,instruction_id,instruction_title,duration_sec,is_negative,timestamp\n";
+
+        for (const take of localDataset) {
+          folder.file(take.filename, take.blob);
+          csvContent += `"${take.filename}","${take.keyword}","${take.speaker}",${take.instruction_id},"${take.instruction_text.replace(/"/g, '""')}",${take.duration},${take.isNegative},"${take.timestamp}"\n`;
+        }
+
+        zip.file("metadata.csv", csvContent);
+
+        const content = await zip.generateAsync({ type: "blob" });
+        const downloadUrl = URL.createObjectURL(content);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = `${safeKeyword}_dataset_${Date.now()}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        showToast("Dataset ZIP downloaded successfully!", "success");
+      } catch (err) {
+        console.error("ZIP Export error:", err);
+        showToast("Failed to generate ZIP: " + err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          <span>Download Dataset (ZIP + CSV)</span>`;
+      }
+    }
+
+    // ================= MODAL & DRAWER CONTROLS =================
+    function openProfileModal() {
+      document.getElementById("inputSpeakerName").value = speakerProfile.name || "";
+      document.getElementById("inputSpeakerGender").value = speakerProfile.gender || "male";
+      document.getElementById("inputSpeakerAccent").value = speakerProfile.accent || "";
+      document.getElementById("inputDeviceType").value = speakerProfile.device || "mobile_phone";
+      document.getElementById("profileModal").classList.remove("hidden");
+    }
+
+    function saveProfile() {
+      const name = document.getElementById("inputSpeakerName").value.trim() || "Member_1";
+      speakerProfile = {
+        name: name,
+        gender: document.getElementById("inputSpeakerGender").value,
+        accent: document.getElementById("inputSpeakerAccent").value.trim() || "Standard",
+        device: document.getElementById("inputDeviceType").value
+      };
+      localStorage.setItem("edge_kws_profile", JSON.stringify(speakerProfile));
+      document.getElementById("profileModal").classList.add("hidden");
+      updateHeader();
+      showToast(`Welcome ${speakerProfile.name}! Ready to record.`, "success");
+    }
+
+    function openSettingsModal() {
+      document.getElementById("settingKeyword").value = currentKeyword;
+      document.getElementById("settingWebhookUrl").value = webhookUrl;
+      document.getElementById("settingDuration").value = clipDuration.toString();
+      document.getElementById("settingsModal").classList.remove("hidden");
+    }
+
+    function closeSettingsModal() {
+      document.getElementById("settingsModal").classList.add("hidden");
+    }
+
+    function saveSettings() {
+      const newKeyword = document.getElementById("settingKeyword").value.trim() || "chhotu";
+      webhookUrl = document.getElementById("settingWebhookUrl").value.trim();
+      clipDuration = parseFloat(document.getElementById("settingDuration").value);
+
+      currentKeyword = newKeyword;
+      localStorage.setItem("edge_kws_keyword", currentKeyword);
+      localStorage.setItem("edge_kws_webhook", webhookUrl);
+      localStorage.setItem("edge_kws_duration", clipDuration.toString());
+
+      closeSettingsModal();
+      updateHeader();
+      loadInstruction(currentIndex);
+      showToast("Settings applied!", "success");
+    }
+
+    function openDatasetDrawer() {
+      renderDatasetList();
+      document.getElementById("datasetDrawer").classList.remove("hidden");
+    }
+
+    function closeDatasetDrawer() {
+      document.getElementById("datasetDrawer").classList.add("hidden");
+    }
+
+    function renderDatasetList() {
+      const container = document.getElementById("datasetListContainer");
+      document.getElementById("drawerCount").textContent = localDataset.length;
+
+      if (localDataset.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-500 text-center py-8">No recordings collected yet in this session.</p>';
+        return;
+      }
+
+      container.innerHTML = localDataset.slice().reverse().map((take, idx) => `
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+          <div class="flex-1 min-w-0 mr-3">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-200">#${take.instruction_id}</span>
+              <span class="truncate text-slate-300 font-medium">${take.instruction_text}</span>
+            </div>
+            <div class="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2">
+              <span>${take.duration}s</span>
+              <span>•</span>
+              <span class="truncate">${take.speaker}</span>
+              <span>•</span>
+              <span class="${take.uploaded ? 'text-emerald-400' : 'text-slate-400'}">${take.uploaded ? '✓ Drive' : 'Local'}</span>
+            </div>
+          </div>
+          <audio src="${URL.createObjectURL(take.blob)}" controls class="h-7 w-28"></audio>
+        </div>
+      `).join("");
+    }
+
+    function clearLocalDataset() {
+      if (confirm("Are you sure you want to clear all locally cached recordings?")) {
+        localDataset = [];
+        document.getElementById("datasetCountBadge").textContent = "0";
+        renderDatasetList();
+        closeSettingsModal();
+        showToast("Local dataset cleared", "info");
+      }
+    }
+
+    // ================= TOAST NOTIFICATION =================
+    function showToast(message, type = "info") {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+
+      if (type === "success") {
+        toast.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-xs font-semibold shadow-xl border flex items-center gap-2 bg-emerald-950 border-emerald-700 text-emerald-200 opacity-100 translate-y-0 transition-all duration-300";
+      } else if (type === "error") {
+        toast.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-xs font-semibold shadow-xl border flex items-center gap-2 bg-rose-950 border-rose-700 text-rose-200 opacity-100 translate-y-0 transition-all duration-300";
+      } else {
+        toast.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-xs font-semibold shadow-xl border flex items-center gap-2 bg-slate-900 border-slate-700 text-slate-200 opacity-100 translate-y-0 transition-all duration-300";
+      }
+
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-20");
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

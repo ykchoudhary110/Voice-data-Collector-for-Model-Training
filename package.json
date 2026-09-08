@@ -1,0 +1,12 @@
+{
+  "name": "edge-kws-voice-collector",
+  "version": "1.0.0",
+  "description": "Voice Dataset Collection Web App for Edge Wake-Word (<256KB RAM)",
+  "scripts": {
+    "start": "npx serve public",
+    "deploy": "npx vercel"
+  },
+  "keywords": ["wake-word", "kws", "edge-ai", "dataset", "tinyml", "speech"],
+  "author": "",
+  "license": "MIT"
+}
