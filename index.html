@@ -647,13 +647,34 @@
       const inst = DEFAULT_INSTRUCTIONS[currentIndex];
       const speakerName = (speakerProfile.name || "anonymous").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
       const safeKeyword = currentKeyword.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
-      const filename = `${safeKeyword}_${speakerName}_inst${inst.id}_${Date.now()}.wav`;
+      
+      // Classify sample type and target folder
+      let sampleType = "POSITIVE";
+      let subfolderName = `01_POSITIVE_${safeKeyword.toUpperCase()}`;
+      let spokenWord = safeKeyword;
+
+      if (inst.category === "Confuser") {
+        sampleType = "HARD_NEGATIVE";
+        subfolderName = "02_HARD_NEGATIVES";
+        spokenWord = (inst.spokenWord || "confuser").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+      } else if (inst.category === "Background") {
+        sampleType = "BACKGROUND_NOISE";
+        subfolderName = "03_BACKGROUND_NOISE";
+        spokenWord = (inst.badge || "noise").replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
+      }
+
+      const scenarioTag = (inst.badge || "general").toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+      const filename = `${sampleType}_${spokenWord}_${speakerName}_inst${inst.id}_${scenarioTag}_${Date.now()}.wav`;
 
       const takeRecord = {
         id: Date.now(),
         keyword: currentKeyword,
+        spoken_word: spokenWord,
+        sample_type: sampleType,
+        subfolder_name: subfolderName,
         speaker: speakerProfile.name || "anonymous",
         instruction_id: inst.id,
+        instruction_category: inst.category,
         instruction_text: inst.title,
         blob: currentTakeResult.blob,
         duration: currentTakeResult.duration,
@@ -678,7 +699,7 @@
       if (currentIndex < DEFAULT_INSTRUCTIONS.length - 1) {
         navigateInstruction(1);
       } else {
-        showToast("Awesome! All 45 instructions completed for Vikram!", "success");
+        showToast("Awesome! All 65 instructions completed for Vikram!", "success");
         openDatasetDrawer();
       }
     }
@@ -691,14 +712,18 @@
         const payload = {
           speaker: takeRecord.speaker,
           keyword: takeRecord.keyword,
+          spoken_word: takeRecord.spoken_word,
+          sample_type: takeRecord.sample_type,
+          subfolder_name: takeRecord.subfolder_name,
           instruction_id: takeRecord.instruction_id,
+          instruction_category: takeRecord.instruction_category,
           instruction_text: takeRecord.instruction_text,
           filename: takeRecord.filename,
           audio_base64: base64Audio,
           device_info: `${speakerProfile.gender || "unknown"} | ${speakerProfile.accent || "unknown"} | ${speakerProfile.device || "unknown"}`
         };
 
-        showToast("Uploading to Google Drive...", "info");
+        showToast(`Saving to ${takeRecord.subfolder_name}...`, "info");
 
         const response = await fetch(webhookUrl.trim(), {
           method: "POST",
@@ -708,13 +733,13 @@
         const result = await response.json();
         if (result.status === "success") {
           takeRecord.uploaded = true;
-          showToast("Saved to Google Drive & Sheet!", "success");
+          showToast(`Saved in 📁 ${result.folder || takeRecord.subfolder_name}!`, "success");
         } else {
-          showToast("Saved locally (Drive replied: " + (result.message || "ok") + ")", "info");
+          showToast("Saved locally (Drive: " + (result.message || "ok") + ")", "info");
         }
       } catch (err) {
         console.error("Google Drive Upload Error:", err);
-        showToast("Saved locally (Google Drive sync failed, check console)", "info");
+        showToast("Saved locally (Drive sync failed, check console)", "info");
       }
     }
 
@@ -731,15 +756,25 @@
 
       try {
         const zip = new JSZip();
-        const safeKeyword = currentKeyword.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
-        const folder = zip.folder(safeKeyword);
 
-        // Build metadata.csv
-        let csvContent = "filename,keyword,speaker,instruction_id,instruction_title,duration_sec,is_negative,timestamp\n";
+        // Create 3 clean class subfolders inside ZIP
+        const posFolder = zip.folder(`01_POSITIVE_${currentKeyword.toUpperCase()}`);
+        const hardNegFolder = zip.folder("02_HARD_NEGATIVES");
+        const bgNoiseFolder = zip.folder("03_BACKGROUND_NOISE");
+
+        // Build metadata.csv with full classification
+        let csvContent = "filename,sample_type,subfolder,spoken_word,keyword,speaker,instruction_id,category,instruction_title,duration_sec,timestamp\n";
 
         for (const take of localDataset) {
-          folder.file(take.filename, take.blob);
-          csvContent += `"${take.filename}","${take.keyword}","${take.speaker}",${take.instruction_id},"${take.instruction_text.replace(/"/g, '""')}",${take.duration},${take.isNegative},"${take.timestamp}"\n`;
+          if (take.sample_type === "HARD_NEGATIVE") {
+            hardNegFolder.file(take.filename, take.blob);
+          } else if (take.sample_type === "BACKGROUND_NOISE") {
+            bgNoiseFolder.file(take.filename, take.blob);
+          } else {
+            posFolder.file(take.filename, take.blob);
+          }
+          
+          csvContent += `"${take.filename}","${take.sample_type}","${take.subfolder_name}","${take.spoken_word}","${take.keyword}","${take.speaker}",${take.instruction_id},"${take.instruction_category}","${take.instruction_text.replace(/"/g, '""')}",${take.duration},"${take.timestamp}"\n`;
         }
 
         zip.file("metadata.csv", csvContent);
@@ -748,12 +783,12 @@
         const downloadUrl = URL.createObjectURL(content);
         const a = document.createElement("a");
         a.href = downloadUrl;
-        a.download = `${safeKeyword}_dataset_${Date.now()}.zip`;
+        a.download = `dataset_${currentKeyword}_${Date.now()}.zip`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
 
-        showToast("Dataset ZIP downloaded successfully!", "success");
+        showToast("Dataset ZIP downloaded with 3 organized class folders!", "success");
       } catch (err) {
         console.error("ZIP Export error:", err);
         showToast("Failed to generate ZIP: " + err.message, "error");

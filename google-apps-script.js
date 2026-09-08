@@ -1,30 +1,16 @@
 /**
  * ==============================================================================
- * GOOGLE APPS SCRIPT: Zero-Auth Direct Upload to Google Drive & Google Sheets
- * ==============================================================================
- * 
- * HOW TO SET THIS UP IN 2 MINUTES:
- * 1. Go to https://drive.google.com and create a new folder (e.g., "Chhotu_WakeWord_Dataset").
- * 2. Open that folder and copy the Folder ID from the URL:
- *    https://drive.google.com/drive/folders/YOUR_FOLDER_ID_HERE
- * 3. Go to https://script.google.com and click "New project".
- * 4. Replace all code in the editor with this file's code.
- * 5. Paste your Folder ID in the `TARGET_FOLDER_ID` constant below.
- * 6. Click "Deploy" (top right) -> "New deployment".
- * 7. Click the gear icon next to "Select type" -> select "Web app".
- * 8. Set:
- *    - Description: "Wake Word Audio Collector"
- *    - Execute as: "Me" (your Google account)
- *    - Who has access: "Anyone"  <-- CRITICAL so contributors can upload!
- * 9. Click "Deploy", grant permissions when prompted.
- * 10. Copy the "Web app URL" (ends with /exec).
- * 11. Paste this Webhook URL into the Web App settings!
+ * GOOGLE APPS SCRIPT: Multi-Class Edge Dataset Classifier & Storage
+ * Automatically organizes into:
+ *   📁 01_POSITIVE_VIKRAM/     (All variations of the target keyword)
+ *   📁 02_HARD_NEGATIVES/       (Confusers: vishram, vikrant, vikas, etc.)
+ *   📁 03_BACKGROUND_NOISE/     (Room silence, fan hum, typing, coughing)
  * ==============================================================================
  */
 
-// Paste your Google Drive Folder ID here (or leave blank to auto-create a folder)
-const TARGET_FOLDER_ID = ""; // e.g. "1a2b3c4d5e6f7g8h9i0j"
-const DEFAULT_FOLDER_NAME = "Edge_WakeWord_Dataset";
+// Paste your Google Drive Folder ID here
+const TARGET_FOLDER_ID = "1jYxlbTNiLccSvmPPqXiJ4qYyqHUCcaqD";
+const DEFAULT_FOLDER_NAME = "Vikram_WakeWord_Dataset";
 
 function doPost(e) {
   try {
@@ -35,9 +21,13 @@ function doPost(e) {
     const payload = JSON.parse(e.postData.contents);
     const {
       speaker = "anonymous",
-      keyword = "keyword",
+      keyword = "vikram",
+      spoken_word = "vikram",
+      sample_type = "POSITIVE", // "POSITIVE", "HARD_NEGATIVE", "BACKGROUND_NOISE"
+      subfolder_name = "01_POSITIVE_VIKRAM",
       instruction_id = "0",
       instruction_text = "",
+      instruction_category = "General",
       audio_base64,
       filename,
       device_info = ""
@@ -47,11 +37,9 @@ function doPost(e) {
       return responseJSON({ status: "error", message: "Missing audio_base64" }, 400);
     }
 
-    // 1. Get or create root dataset folder
+    // 1. Get root dataset folder
     let targetFolder;
     let folderId = TARGET_FOLDER_ID ? TARGET_FOLDER_ID.trim() : "";
-    
-    // Auto-extract ID if user pasted full Google Drive URL
     if (folderId.includes("/folders/")) {
       const parts = folderId.split("/folders/")[1];
       folderId = parts.split("/")[0].split("?")[0].trim();
@@ -67,24 +55,37 @@ function doPost(e) {
       targetFolder = getOrCreateFolder(DEFAULT_FOLDER_NAME);
     }
 
-    // 2. Get or create keyword subfolder: e.g., "chhotu/"
-    const safeKeyword = keyword.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
-    const keywordFolder = getOrCreateSubFolder(targetFolder, safeKeyword);
+    // 2. Automatically sort into class subfolders:
+    //    e.g. "01_POSITIVE_VIKRAM", "02_HARD_NEGATIVES", "03_BACKGROUND_NOISE"
+    let classFolderName = subfolder_name;
+    if (!classFolderName) {
+      if (sample_type === "HARD_NEGATIVE") {
+        classFolderName = "02_HARD_NEGATIVES";
+      } else if (sample_type === "BACKGROUND_NOISE") {
+        classFolderName = "03_BACKGROUND_NOISE";
+      } else {
+        classFolderName = `01_POSITIVE_${keyword.toUpperCase()}`;
+      }
+    }
+    const classFolder = getOrCreateSubFolder(targetFolder, classFolderName);
 
     // 3. Decode base64 audio into 16kHz WAV file
     const decodedBytes = Utilities.base64Decode(audio_base64);
-    const safeSpeaker = speaker.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
-    const cleanFilename = filename || `${safeKeyword}_${safeSpeaker}_inst${instruction_id}_${Date.now()}.wav`;
+    const cleanFilename = filename || `${sample_type}_${spoken_word}_${speaker}_inst${instruction_id}_${Date.now()}.wav`;
     
     const blob = Utilities.newBlob(decodedBytes, "audio/wav", cleanFilename);
-    const savedFile = keywordFolder.createFile(blob);
+    const savedFile = classFolder.createFile(blob);
 
     // 4. Log to Google Sheet inside the root dataset folder
     logToSheet(targetFolder, {
       timestamp: new Date().toISOString(),
-      speaker: safeSpeaker,
-      keyword: safeKeyword,
+      sample_type: sample_type,
+      class_folder: classFolderName,
+      spoken_word: spoken_word,
+      keyword: keyword,
+      speaker: speaker,
       instruction_id: instruction_id,
+      instruction_category: instruction_category,
       instruction_text: instruction_text,
       filename: cleanFilename,
       file_url: savedFile.getUrl(),
@@ -94,7 +95,9 @@ function doPost(e) {
 
     return responseJSON({
       status: "success",
-      message: "Audio saved successfully",
+      message: "Audio saved in class folder",
+      folder: classFolderName,
+      sample_type: sample_type,
       file_id: savedFile.getId(),
       file_url: savedFile.getUrl(),
       filename: cleanFilename
@@ -113,6 +116,7 @@ function doGet(e) {
   return responseJSON({
     status: "online",
     service: "Edge Wake-Word Audio Collector",
+    target_folder: TARGET_FOLDER_ID,
     timestamp: new Date().toISOString()
   }, 200);
 }
@@ -154,9 +158,13 @@ function logToSheet(folder, entry) {
       const sheet = spreadsheet.getActiveSheet();
       sheet.appendRow([
         "Timestamp",
-        "Speaker",
+        "Class / Sample Type",
+        "Target Folder",
+        "Spoken Word",
         "Keyword",
+        "Speaker",
         "Instruction ID",
+        "Category",
         "Instruction Text",
         "Filename",
         "File URL",
@@ -169,9 +177,13 @@ function logToSheet(folder, entry) {
     const sheet = spreadsheet.getActiveSheet();
     sheet.appendRow([
       entry.timestamp,
-      entry.speaker,
+      entry.sample_type,
+      entry.class_folder,
+      entry.spoken_word,
       entry.keyword,
+      entry.speaker,
       entry.instruction_id,
+      entry.instruction_category,
       entry.instruction_text,
       entry.filename,
       entry.file_url,
