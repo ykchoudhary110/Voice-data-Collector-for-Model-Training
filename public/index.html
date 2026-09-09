@@ -688,9 +688,9 @@
       localDataset.push(takeRecord);
       document.getElementById("datasetCountBadge").textContent = localDataset.length;
 
-      // 2. Upload to Google Drive if Webhook is configured
+      // 2. Enqueue upload to Google Drive if Webhook is configured
       if (webhookUrl && webhookUrl.trim().startsWith("https://")) {
-        uploadToGoogleDrive(takeRecord);
+        enqueueUpload(takeRecord);
       } else {
         showToast(`Saved locally! (${localDataset.length} total)`, "success");
       }
@@ -704,42 +704,91 @@
       }
     }
 
-    // ================= ASYNC GOOGLE DRIVE UPLOAD =================
-    async function uploadToGoogleDrive(takeRecord) {
-      try {
-        const base64Audio = await EdgeAudioRecorder.blobToBase64(takeRecord.blob);
-        
-        const payload = {
-          speaker: takeRecord.speaker,
-          keyword: takeRecord.keyword,
-          spoken_word: takeRecord.spoken_word,
-          sample_type: takeRecord.sample_type,
-          subfolder_name: takeRecord.subfolder_name,
-          instruction_id: takeRecord.instruction_id,
-          instruction_category: takeRecord.instruction_category,
-          instruction_text: takeRecord.instruction_text,
-          filename: takeRecord.filename,
-          audio_base64: base64Audio,
-          device_info: `${speakerProfile.gender || "unknown"} | ${speakerProfile.accent || "unknown"} | ${speakerProfile.device || "unknown"}`
-        };
+    // ================= RESILIENT UPLOAD QUEUE (CONCURRENCY-SAFE) =================
+    const uploadQueue = [];
+    let isProcessingQueue = false;
 
-        showToast(`Saving to ${takeRecord.subfolder_name}...`, "info");
+    function enqueueUpload(takeRecord) {
+      uploadQueue.push(takeRecord);
+      updateQueueUI();
+      processUploadQueue();
+    }
 
-        const response = await fetch(webhookUrl.trim(), {
-          method: "POST",
-          body: JSON.stringify(payload)
-        });
+    async function processUploadQueue() {
+      if (isProcessingQueue || uploadQueue.length === 0) return;
+      if (!webhookUrl || !webhookUrl.trim().startsWith("https://")) return;
 
-        const result = await response.json();
-        if (result.status === "success") {
-          takeRecord.uploaded = true;
-          showToast(`Saved in 📁 ${result.folder || takeRecord.subfolder_name}!`, "success");
-        } else {
-          showToast("Saved locally (Drive: " + (result.message || "ok") + ")", "info");
+      isProcessingQueue = true;
+      updateQueueUI();
+
+      while (uploadQueue.length > 0) {
+        const takeRecord = uploadQueue[0];
+        let success = false;
+        let attempts = 0;
+        const maxAttempts = 3;
+
+        while (!success && attempts < maxAttempts) {
+          attempts++;
+          try {
+            const base64Audio = await EdgeAudioRecorder.blobToBase64(takeRecord.blob);
+            
+            const payload = {
+              speaker: takeRecord.speaker,
+              keyword: takeRecord.keyword,
+              spoken_word: takeRecord.spoken_word,
+              sample_type: takeRecord.sample_type,
+              subfolder_name: takeRecord.subfolder_name,
+              instruction_id: takeRecord.instruction_id,
+              instruction_category: takeRecord.instruction_category,
+              instruction_text: takeRecord.instruction_text,
+              filename: takeRecord.filename,
+              audio_base64: base64Audio,
+              device_info: `${speakerProfile.gender || "unknown"} | ${speakerProfile.accent || "unknown"} | ${speakerProfile.device || "unknown"}`
+            };
+
+            const response = await fetch(webhookUrl.trim(), {
+              method: "POST",
+              body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              if (result.status === "success") {
+                takeRecord.uploaded = true;
+                success = true;
+                break;
+              }
+            }
+          } catch (err) {
+            console.warn(`Upload attempt ${attempts} failed:`, err);
+          }
+
+          if (!success && attempts < maxAttempts) {
+            // Wait with backoff before retry (1.5s, 3.0s)
+            await new Promise(r => setTimeout(r, attempts * 1500));
+          }
         }
-      } catch (err) {
-        console.error("Google Drive Upload Error:", err);
-        showToast("Saved locally (Drive sync failed, check console)", "info");
+
+        uploadQueue.shift();
+        updateQueueUI();
+      }
+
+      isProcessingQueue = false;
+      updateQueueUI();
+    }
+
+    function updateQueueUI() {
+      const driveDot = document.getElementById("driveStatusDot");
+      const driveText = document.getElementById("driveStatusText");
+      if (!webhookUrl || !webhookUrl.trim().startsWith("https://")) {
+        driveDot.className = "w-2 h-2 rounded-full bg-amber-400";
+        driveText.textContent = "Local Only";
+      } else if (uploadQueue.length > 0) {
+        driveDot.className = "w-2 h-2 rounded-full bg-cyan-400 animate-pulse";
+        driveText.textContent = `Syncing (${uploadQueue.length})...`;
+      } else {
+        driveDot.className = "w-2 h-2 rounded-full bg-emerald-400";
+        driveText.textContent = "Drive Synced ✓";
       }
     }
 
